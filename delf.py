@@ -1,10 +1,7 @@
 #!/usr/bin/python3
 
-import argparse
 import code
-import readline
 import signal
-import sys
 from load import premain, CLIArgParser, SigHandler_SIGINT
 
 def main():

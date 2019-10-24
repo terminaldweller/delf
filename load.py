@@ -19,12 +19,9 @@
 #**********************************************************************************************************************/
 import argparse
 import sys
-import readline
 import code
 import signal
-import os
 import sys
-import shutil
 from capstone import *
 from capstone.x86 import *
 
@@ -1020,7 +1017,6 @@ class ELF(object):
                             strrep.append(str(chr(byte)))
                             print(format(byte, '02x') + ' ', end='')
                         else:
-                            pass
                             strrep += str(chr(byte))
                             print(format(byte, '02x') + ' ', end='')
                         count += 1
@@ -1084,7 +1080,7 @@ class ELF(object):
         pad_list = [byte2int(self.elfhdr.ei_pad)]
         type_list = [byte2int(self.elfhdr.e_type)]
         machine_list = [byte2int(self.elfhdr.e_machine)]
-        version_list = [byte2int(self.elfhdr.e_version)]
+        e_version_list = [byte2int(self.elfhdr.e_version)]
         entry_list = [byte2int(self.elfhdr.e_entry)]
         phoff_list = [byte2int(self.elfhdr.e_phoff)]
         shoff_list = [byte2int(self.elfhdr.e_shoff)]
@@ -1254,11 +1250,11 @@ class ELF(object):
                 self.so.seek(byte2int(section.sh_offset))
                 self.dyn_section = self.so.read(byte2int(section.sh_size))
         length = int(len(self.dyn_section))
-        tag_type = int()
-        type_string = str()
-        value = int()
+        #tag_type = int()
+        #type_string = str()
+        #value = int()
         dummy = {}
-        jmp_val = int()
+        #jmp_val = int()
         if self.size == 64: jmp_val = 8
         elif self.size == 32: jmp_val = 4
         else: jmp_val = 8; print("self.size is not set for class elf.going with 8 as a default.")
