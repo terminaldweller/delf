@@ -1,5 +1,6 @@
 
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/bloodstalker/delf.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/bloodstalker/delf/alerts/)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/1e67ac7026904cddb55ede7097995ad8)](https://www.codacy.com/gh/terminaldweller/hived/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=terminaldweller/hived&amp;utm_campaign=Badge_Grade)
 
 # delf
 delf is an ELF dump tool.<br/>
@@ -60,4 +61,4 @@ optional arguments:
 If there is something you need delf to do, make an issue and I'll take a look.<br/>
 
 ## TODO
-delf does not support ELF32. I'll write that in whenver I get the tiem to work on delf<br/>
+delf does not support ELF32. I'll write that in whenever I get the time to work on delf<br/>
