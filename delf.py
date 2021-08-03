@@ -4,6 +4,7 @@ import code
 import signal
 from load import premain, CLIArgParser, SigHandler_SIGINT
 
+
 def main():
     argparser = CLIArgParser()
     if argparser.args.dbg:
@@ -11,7 +12,8 @@ def main():
             premain(argparser)
         except Exception as e:
             print(e.__doc__)
-            if e.message: print(e.message)
+            if e.message: 
+                print(e.message)
             signal.signal(signal.SIGINT, SigHandler_SIGINT)
             variables = globals().copy()
             variables.update(locals())
@@ -19,6 +21,7 @@ def main():
             shell.interact(banner="DELF REPL")
     else:
         premain(argparser)
+
 
 if __name__ == "__main__":
     main()
