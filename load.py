@@ -19,10 +19,14 @@
 # MA  02110-1301, USA.*/
 # *****************************************************************************/
 import argparse
-import sys
 import code
+import os
 import signal
+import subprocess
+import sys
+
 from capstone import CS_ARCH_X86, CS_MODE_64, Cs
+
 # from capstone.x86 import Cs
 
 
@@ -60,69 +64,152 @@ class ExceptionHandler(object):
 class CLIArgParser(object):
     def __init__(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument("--dbg", action="store_true",
-                            help="debug", default=False)
         parser.add_argument(
-            "--obj", type=str, help="path to the executbale, shared object "
-            "or object you want to load in bruiser")
-        parser.add_argument("--header", action='store_true',
-                            help="dump headers", default=False)
-        parser.add_argument("--symboltable", action='store_true',
-                            help="dump symbol table", default=False)
-        parser.add_argument("--phdrs", action='store_true',
-                            help="dump program haeders", default=False)
-        parser.add_argument("--shdrs", action='store_true',
-                            help="dump section haeders", default=False)
-        parser.add_argument("--symbolindex", action='store_true',
-                            help="dump symbol index", default=False)
-        parser.add_argument("--stentries", action='store_true',
-                            help="dump section table entries", default=False)
-        parser.add_argument("--objcode", action='store_true',
-                            help="dump objects", default=False)
-        parser.add_argument("--test", action='store_true',
-                            help="test switch", default=False)
-        parser.add_argument("--test2", action='store_true',
-                            help="test switch 2", default=False)
-        parser.add_argument("--funcs", action='store_true',
-                            help="dump functions", default=False)
-        parser.add_argument("--objs", action='store_true',
-                            help="dump objects", default=False)
-        parser.add_argument("--dynsym", action='store_true',
-                            help="dump dynamic symbol table", default=False)
-        parser.add_argument("--dlpath", action='store_true',
-                            help="dump dynamic linker path", default=False)
-        parser.add_argument("--phdynent", action='store_true',
-                            help="dump ph PT_DYNAMIC entries", default=False)
+            "--dbg", action="store_true", help="debug", default=False
+        )
+        parser.add_argument(
+            "--obj",
+            type=str,
+            help="path to the executbale, shared object "
+            "or object you want to load in bruiser",
+        )
+        parser.add_argument(
+            "--header", action="store_true", help="dump headers", default=False
+        )
+        parser.add_argument(
+            "--symboltable",
+            action="store_true",
+            help="dump symbol table",
+            default=False,
+        )
+        parser.add_argument(
+            "--phdrs",
+            action="store_true",
+            help="dump program haeders",
+            default=False,
+        )
+        parser.add_argument(
+            "--shdrs",
+            action="store_true",
+            help="dump section haeders",
+            default=False,
+        )
+        parser.add_argument(
+            "--symbolindex",
+            action="store_true",
+            help="dump symbol index",
+            default=False,
+        )
+        parser.add_argument(
+            "--stentries",
+            action="store_true",
+            help="dump section table entries",
+            default=False,
+        )
+        parser.add_argument(
+            "--objcode",
+            action="store_true",
+            help="dump objects",
+            default=False,
+        )
+        parser.add_argument(
+            "--test", action="store_true", help="test switch", default=False
+        )
+        parser.add_argument(
+            "--test2", action="store_true", help="test switch 2", default=False
+        )
+        parser.add_argument(
+            "--listdso", action="store_true", help="list DSOs", default=False
+        )
+        parser.add_argument(
+            "--funcs",
+            action="store_true",
+            help="dump functions",
+            default=False,
+        )
+        parser.add_argument(
+            "--objs", action="store_true", help="dump objects", default=False
+        )
+        parser.add_argument(
+            "--dynsym",
+            action="store_true",
+            help="dump dynamic symbol table",
+            default=False,
+        )
+        parser.add_argument(
+            "--dlpath",
+            action="store_true",
+            help="dump dynamic linker path",
+            default=False,
+        )
+        parser.add_argument(
+            "--phdynent",
+            action="store_true",
+            help="dump ph PT_DYNAMIC entries",
+            default=False,
+        )
         parser.add_argument("--section", type=str, help="dump a section")
-        parser.add_argument("--dumpfunc", type=str,
-                            help="dump a functions machine code")
-        parser.add_argument("--dumpfuncasm", type=str,
-                            help="dump a functions assembly code")
-        parser.add_argument("--textasm", action='store_true',
-                            help="disassemble the text section", default=False)
-        parser.add_argument("--dynsecents", action='store_true',
-                            help="dynamic section entries", default=False)
-        parser.add_argument("--reladyn", action='store_true',
-                            help=".rela.dyn entries", default=False)
-        parser.add_argument("--relaplt", action='store_true',
-                            help=".rela.plt entries", default=False)
-        parser.add_argument("--rodata", action='store_true',
-                            help="dump .rodata", default=False)
         parser.add_argument(
-            "--disass", type=str, help="disassembls a section by "
-            "name in section headers")
+            "--dumpfunc", type=str, help="dump a functions machine code"
+        )
         parser.add_argument(
-            "--disassp", type=int, help="disassembls a section "
-            "by index in program headers")
-        parser.add_argument("--got", action="store_true",
-                            help="dump .got section", default=False)
-        parser.add_argument("--gotplt", action="store_true",
-                            help="dump .got.plt section", default=False)
+            "--dumpfuncasm", type=str, help="dump a functions assembly code"
+        )
+        parser.add_argument(
+            "--textasm",
+            action="store_true",
+            help="disassemble the text section",
+            default=False,
+        )
+        parser.add_argument(
+            "--dynsecents",
+            action="store_true",
+            help="dynamic section entries",
+            default=False,
+        )
+        parser.add_argument(
+            "--reladyn",
+            action="store_true",
+            help=".rela.dyn entries",
+            default=False,
+        )
+        parser.add_argument(
+            "--relaplt",
+            action="store_true",
+            help=".rela.plt entries",
+            default=False,
+        )
+        parser.add_argument(
+            "--rodata", action="store_true", help="dump .rodata", default=False
+        )
+        parser.add_argument(
+            "--disass",
+            type=str,
+            help="disassembls a section by " "name in section headers",
+        )
+        parser.add_argument(
+            "--disassp",
+            type=int,
+            help="disassembls a section " "by index in program headers",
+        )
+        parser.add_argument(
+            "--got",
+            action="store_true",
+            help="dump .got section",
+            default=False,
+        )
+        parser.add_argument(
+            "--gotplt",
+            action="store_true",
+            help="dump .got.plt section",
+            default=False,
+        )
         self.args = parser.parse_args()
         if self.args.obj is None:
             raise Exception(
                 "no object file provided. "
-                "please specify an object with --obj.")
+                "please specify an object with --obj."
+            )
 
 
 def byte2int(value, sign=False):
@@ -137,25 +224,25 @@ def LEB128UnsignedDecode(bytelist):
     result = 0
     shift = 0
     for byte in bytelist:
-        result |= (byte & 0x7f) << shift
+        result |= (byte & 0x7F) << shift
         if (byte & 0x80) == 0:
             break
         shift += 7
-    return(result)
+    return result
 
 
 def LEB128SignedDecode(bytelist):
     result = 0
     shift = 0
     for byte in bytelist:
-        result |= (byte & 0x7f) << shift
+        result |= (byte & 0x7F) << shift
         last_byte = byte
         shift += 7
         if (byte & 0x80) == 0:
             break
     if last_byte & 0x40:
-        result |= - (1 << shift)
-    return(result)
+        result |= -(1 << shift)
+    return result
 
 
 def LEB128UnsignedEncode(int_val):
@@ -165,33 +252,34 @@ def LEB128UnsignedEncode(int_val):
         return bytes([0])
     byte_array = bytearray()
     while int_val:
-        byte = int_val & 0x7f
+        byte = int_val & 0x7F
         byte_array.append(byte | 0x80)
         int_val >>= 7
     byte_array[-1] ^= 0x80
-    return(byte_array)
+    return byte_array
 
 
 def LEB128SignedEncode(int_val):
     byte_array = bytearray()
     while True:
-        byte = int_val & 0x7f
+        byte = int_val & 0x7F
         byte_array.append(byte | 0x80)
         int_val >>= 7
-        if ((int_val == 0 and byte & 0x40 == 0) or
-                (int_val == -1 and byte & 0x40)):
+        if (int_val == 0 and byte & 0x40 == 0) or (
+            int_val == -1 and byte & 0x40
+        ):
             byte_array[-1] ^= 0x80
             break
-    return(byte_array)
+    return byte_array
 
 
-class ELF_REL():
+class ELF_REL:
     def __init__(self, r_offset, r_info):
         self.r_offset = r_offset
         self.r_info = r_info
 
 
-class ELF_RELA():
+class ELF_RELA:
     def __init__(self, r_offset, r_info, r_addend):
         self.r_offset = r_offset
         self.r_info = r_info
@@ -211,15 +299,18 @@ def ffs(offset, header_list, numbered, *args):
     dummy = []
 
     if numbered:
-        numbers_f.extend(range(1, len(args[-1])+1))
+        numbers_f.extend(range(1, len(args[-1]) + 1))
         max_column_width.append(
-            max([len(repr(number))
-                 for number in numbers_f]) if numbers_f else 6)
+            max([len(repr(number)) for number in numbers_f])
+            if numbers_f
+            else 6
+        )
         header_list.insert(0, "idx")
 
     for arg in args:
         max_column_width.append(
-            max([len(repr(argette)) for argette in arg]) if arg else 6)
+            max([len(repr(argette)) for argette in arg]) if arg else 6
+        )
 
     index = range(0, len(header_list))
     for header, width, i in zip(header_list, max_column_width, index):
@@ -233,12 +324,12 @@ def ffs(offset, header_list, numbered, *args):
     index2 = range(0, len(args[-1]))
     for i in index2:
         if numbered:
-            dummy.append(ci+cb+repr(i).ljust(max_column_width[0])+ce)
+            dummy.append(ci + cb + repr(i).ljust(max_column_width[0]) + ce)
             for arg, width in zip(args, max_column_width[1:]):
-                dummy.append(cd+repr(arg[i]).ljust(width)+ce)
+                dummy.append(cd + repr(arg[i]).ljust(width) + ce)
         else:
             for arg, width in zip(args, max_column_width):
-                dummy.append(cd+repr(arg[i]).ljust(width)+ce)
+                dummy.append(cd + repr(arg[i]).ljust(width) + ce)
         lines.append("".join(dummy))
         dummy.clear()
     return lines
@@ -265,13 +356,13 @@ def get_section_type_string(number):
         return "NOBITS"
     if number == 0x9:
         return "REL"
-    if number == 0xa:
+    if number == 0xA:
         return "SHLIB"
-    if number == 0xb:
+    if number == 0xB:
         return "DYNSYM"
-    if number == 0xe:
+    if number == 0xE:
         return "INIT_ARRAY"
-    if number == 0xf:
+    if number == 0xF:
         return "FINI_ARRAY"
     if number == 0x10:
         return "PREINIT"
@@ -283,11 +374,11 @@ def get_section_type_string(number):
         return "NUM"
     if number == 0x60000000:
         return "LOOS"
-    if number == 0x6ffffff6:
+    if number == 0x6FFFFFF6:
         return "GNU_HASH"
-    if number == 0x6fffffff:
+    if number == 0x6FFFFFFF:
         return "VERSYM"
-    if number == 0x6ffffffe:
+    if number == 0x6FFFFFFE:
         return "VERNEED"
 
 
@@ -302,18 +393,18 @@ class sh_type_e:
     SHT_NOTE = 0x7
     SHT_NOBITS = 0x8
     SHT_REL = 0x9
-    SHT_SHLIB = 0xa
-    SHT_DYNSYM = 0xb
-    SHT_INIT_ARRAY = 0xe
-    SHT_FINI_ARRAY = 0xf
+    SHT_SHLIB = 0xA
+    SHT_DYNSYM = 0xB
+    SHT_INIT_ARRAY = 0xE
+    SHT_FINI_ARRAY = 0xF
     SHT_PREINIT = 0x10
     SHT_GROUP = 0x11
     SHT_SYMTAB_SHNDX = 0x12
     SHT_NUM = 0x13
     SHT_LOOS = 0x60000000
-    GNU_HASH = 0x6ffffff6
-    VERSYM = 0x6fffffff
-    VERNEED = 0x6ffffffe
+    GNU_HASH = 0x6FFFFFF6
+    VERSYM = 0x6FFFFFFF
+    VERNEED = 0x6FFFFFFE
 
 
 class sh_flags_e:
@@ -327,8 +418,8 @@ class sh_flags_e:
     SHF_OS_NONCONFORMING = 0x100
     SHF_GROUP = 0x200
     SHF_TLS = 0x400
-    SHF_MASKOS = 0x0ff00000
-    SHF_MASKPROC = 0xf0000000
+    SHF_MASKOS = 0x0FF00000
+    SHF_MASKPROC = 0xF0000000
     SHF_ORDERED = 0x4000000
     SHF_EXCLUDE = 0x8000000
 
@@ -345,9 +436,9 @@ class p_type_e:
     PT_HIOS = 0x6FFFFFFF
     PT_LOPROC = 0x70000000
     PT_HIPROC = 0x7FFFFFFF
-    GNU_EH_FRAME = 0x6474e550
-    GNU_STACK = 0x6474e551
-    GNU_RELRO = 0x6474e552
+    GNU_EH_FRAME = 0x6474E550
+    GNU_STACK = 0x6474E551
+    GNU_RELRO = 0x6474E552
 
 
 def get_ph_type(value):
@@ -403,7 +494,7 @@ def get_elf_seg_flag(value):
         ret.append("W")
     if (value & 0x04) >> 2 == 1:
         ret.append("R")
-    return ''.join(ret)
+    return "".join(ret)
 
 
 class PH_DYN_TAG_TYPE:
@@ -444,49 +535,49 @@ class PH_DYN_TAG_TYPE:
     DT_PREINIT_ARRAY = 32
     DT_PREINIT_ARRAYSZ = 33
     DT_NUM = 34
-    DT_LOOS = 0x6000000d
-    DT_HIOS = 0x6ffff000
+    DT_LOOS = 0x6000000D
+    DT_HIOS = 0x6FFFF000
     DT_PROC_NUM = 0x0
     DT_MIPS_NUM = 0x0
-    DT_VALRNGLO = 0x6ffffd00
-    DT_GNU_PRELINKED = 0x6ffffdf5
-    DT_GNU_CONFLICTSZ = 0x6ffffdf6
-    DT_GNU_LIBLISTSZ = 0x6ffffdf7
-    DT_CHECKSUM = 0x6ffffdf8
-    DT_PLTPADSZ = 0x6ffffdf9
-    DT_MOVEENT = 0x6ffffdfa
-    DT_MOVESZ = 0x6ffffdfb
-    DT_FEATURE_1 = 0x6ffffdfc
-    DT_POSFLAG_1 = 0x6ffffdfd
-    DT_SYMINSZ = 0x6ffffdfe
-    DT_SYMINENT = 0x6ffffdff
-    DT_VALRNGHI = 0x6ffffdff
+    DT_VALRNGLO = 0x6FFFFD00
+    DT_GNU_PRELINKED = 0x6FFFFDF5
+    DT_GNU_CONFLICTSZ = 0x6FFFFDF6
+    DT_GNU_LIBLISTSZ = 0x6FFFFDF7
+    DT_CHECKSUM = 0x6FFFFDF8
+    DT_PLTPADSZ = 0x6FFFFDF9
+    DT_MOVEENT = 0x6FFFFDFA
+    DT_MOVESZ = 0x6FFFFDFB
+    DT_FEATURE_1 = 0x6FFFFDFC
+    DT_POSFLAG_1 = 0x6FFFFDFD
+    DT_SYMINSZ = 0x6FFFFDFE
+    DT_SYMINENT = 0x6FFFFDFF
+    DT_VALRNGHI = 0x6FFFFDFF
     DT_VALNUM = 12
-    DT_ADDRRNGLO = 0x6ffffe00
-    DT_GNU_HASH = 0x6ffffef5
-    DT_TLSDESC_PLT = 0x6ffffef6
-    DT_TLSDESC_GOT = 0x6ffffef7
-    DT_GNU_CONFLICT = 0x6ffffef8
-    DT_GNU_LIBLIST = 0x6ffffef9
-    DT_CONFIG = 0x6ffffefa
-    DT_DEPAUDIT = 0x6ffffefb
-    DT_AUDIT = 0x6ffffefc
-    DT_PLTPAD = 0x6ffffefd
-    DT_MOVETAB = 0x6ffffefe
-    DT_SYMINFO = 0x6ffffeff
-    DT_ADDRRNGHI = 0x6ffffeff
+    DT_ADDRRNGLO = 0x6FFFFE00
+    DT_GNU_HASH = 0x6FFFFEF5
+    DT_TLSDESC_PLT = 0x6FFFFEF6
+    DT_TLSDESC_GOT = 0x6FFFFEF7
+    DT_GNU_CONFLICT = 0x6FFFFEF8
+    DT_GNU_LIBLIST = 0x6FFFFEF9
+    DT_CONFIG = 0x6FFFFEFA
+    DT_DEPAUDIT = 0x6FFFFEFB
+    DT_AUDIT = 0x6FFFFEFC
+    DT_PLTPAD = 0x6FFFFEFD
+    DT_MOVETAB = 0x6FFFFEFE
+    DT_SYMINFO = 0x6FFFFEFF
+    DT_ADDRRNGHI = 0x6FFFFEFF
     DT_ADDRNUM = 11
-    DT_VERSYM = 0x6ffffff0
-    DT_RELACOUNT = 0x6ffffff9
-    DT_RELCOUNT = 0x6ffffffa
-    DT_FLAGS_1 = 0x6ffffffb
-    DT_VERDEF = 0x6ffffffc
-    DT_VERDEFNUM = 0x6ffffffd
-    DT_VERNEED = 0x6ffffffe
-    DT_VERNEEDNUM = 0x6fffffff
+    DT_VERSYM = 0x6FFFFFF0
+    DT_RELACOUNT = 0x6FFFFFF9
+    DT_RELCOUNT = 0x6FFFFFFA
+    DT_FLAGS_1 = 0x6FFFFFFB
+    DT_VERDEF = 0x6FFFFFFC
+    DT_VERDEFNUM = 0x6FFFFFFD
+    DT_VERNEED = 0x6FFFFFFE
+    DT_VERNEEDNUM = 0x6FFFFFFF
     DT_VERSIONTAGNUM = 16
-    DT_AUXILIARY = 0x7ffffffd
-    DT_FILTER = 0x7fffffff
+    DT_AUXILIARY = 0x7FFFFFFD
+    DT_FILTER = 0x7FFFFFFF
     DT_EXTRANUM = 3
 
 
@@ -821,71 +912,71 @@ def get_x86_64_rel_type(val):
 
 def get_x86_64_rel_type_2(val):
     if val == X86_64_REL_TYPE_2.R_X86_64_NONE:
-        return"R_X86_64_NONE"
+        return "R_X86_64_NONE"
     elif val == X86_64_REL_TYPE_2.R_X86_64_64:
-        return"R_X86_64_64"
+        return "R_X86_64_64"
     elif val == X86_64_REL_TYPE_2.R_X86_64_PC32:
-        return"R_X86_64_PC32"
+        return "R_X86_64_PC32"
     elif val == X86_64_REL_TYPE_2.R_X86_64_GOT32:
-        return"R_X86_64_GOT32"
+        return "R_X86_64_GOT32"
     elif val == X86_64_REL_TYPE_2.R_X86_64_PLT32:
-        return"R_X86_64_PLT32"
+        return "R_X86_64_PLT32"
     elif val == X86_64_REL_TYPE_2.R_X86_64_COPY:
-        return"R_X86_64_COPY"
+        return "R_X86_64_COPY"
     elif val == X86_64_REL_TYPE_2.R_X86_64_GLOB_DAT:
-        return"R_X86_64_GLOB_DAT"
+        return "R_X86_64_GLOB_DAT"
     elif val == X86_64_REL_TYPE_2.R_X86_64_JUMP_SLOT:
-        return"R_X86_64_JUMP_SLOT"
+        return "R_X86_64_JUMP_SLOT"
     elif val == X86_64_REL_TYPE_2.R_X86_64_RELATIVE:
-        return"R_X86_64_RELATIVE"
+        return "R_X86_64_RELATIVE"
     elif val == X86_64_REL_TYPE_2.R_X86_64_GOTPCREL:
-        return"R_X86_64_GOTPCREL"
+        return "R_X86_64_GOTPCREL"
     elif val == X86_64_REL_TYPE_2.R_X86_64_32:
-        return"R_X86_64_32"
+        return "R_X86_64_32"
     elif val == X86_64_REL_TYPE_2.R_X86_64_32S:
-        return"R_X86_64_32S"
+        return "R_X86_64_32S"
     elif val == X86_64_REL_TYPE_2.R_X86_64_16:
-        return"R_X86_64_16"
+        return "R_X86_64_16"
     elif val == X86_64_REL_TYPE_2.R_X86_64_PC16:
-        return"R_X86_64_PC16"
+        return "R_X86_64_PC16"
     elif val == X86_64_REL_TYPE_2.R_X86_64_64_8:
-        return"R_X86_64_64_8"
+        return "R_X86_64_64_8"
     elif val == X86_64_REL_TYPE_2.R_X86_64_PC8:
-        return"R_X86_64_PC8"
+        return "R_X86_64_PC8"
     elif val == X86_64_REL_TYPE_2.R_X86_64_DTPMOD64:
-        return"R_X86_64_DTPMOD64"
+        return "R_X86_64_DTPMOD64"
     elif val == X86_64_REL_TYPE_2.R_X86_64_DTPOFF64:
-        return"R_X86_64_DTPOFF64"
+        return "R_X86_64_DTPOFF64"
     elif val == X86_64_REL_TYPE_2.R_X86_64_TPOFF64:
-        return"R_X86_64_TPOFF64"
+        return "R_X86_64_TPOFF64"
     elif val == X86_64_REL_TYPE_2.R_X86_64_TLSGD:
-        return"R_X86_64_TLSGD"
+        return "R_X86_64_TLSGD"
     elif val == X86_64_REL_TYPE_2.R_X86_64_TLSLD:
-        return"R_X86_64_TLSLD"
+        return "R_X86_64_TLSLD"
     elif val == X86_64_REL_TYPE_2.R_X86_64_DTPOFF32:
-        return"R_X86_64_DTPOFF32"
+        return "R_X86_64_DTPOFF32"
     elif val == X86_64_REL_TYPE_2.R_X86_64_GOTTPOFF:
-        return"R_X86_64_GOTTPOFF"
+        return "R_X86_64_GOTTPOFF"
     elif val == X86_64_REL_TYPE_2.R_X86_64_TPOFF32:
-        return"R_X86_64_TPOFF32"
+        return "R_X86_64_TPOFF32"
     elif val == X86_64_REL_TYPE_2.R_X86_64_PC64:
-        return"R_X86_64_PC64"
+        return "R_X86_64_PC64"
     elif val == X86_64_REL_TYPE_2.R_X86_64_GOTOFF64:
-        return"R_X86_64_GOTOFF64"
+        return "R_X86_64_GOTOFF64"
     elif val == X86_64_REL_TYPE_2.R_X86_64_GOTPC32:
-        return"R_X86_64_GOTPC32"
+        return "R_X86_64_GOTPC32"
     elif val == X86_64_REL_TYPE_2.R_X86_64_SIZE32:
-        return"R_X86_64_SIZE32"
+        return "R_X86_64_SIZE32"
     elif val == X86_64_REL_TYPE_2.R_X86_64_SIZE64:
-        return"R_X86_64_SIZE64"
+        return "R_X86_64_SIZE64"
     elif val == X86_64_REL_TYPE_2.R_X86_64_GOTPC32_TLDSEC:
-        return"R_X86_64_GOTPC32_TLDSEC"
+        return "R_X86_64_GOTPC32_TLDSEC"
     elif val == X86_64_REL_TYPE_2.R_X86_64_TLDSEC_CALL:
-        return"R_X86_64_TLDSEC_CALL"
+        return "R_X86_64_TLDSEC_CALL"
     elif val == X86_64_REL_TYPE_2.R_X86_64_TLDSEC:
-        return"R_X86_64_TLDSEC"
+        return "R_X86_64_TLDSEC"
     elif val == X86_64_REL_TYPE_2.R_X86_64_IRELATIVE:
-        return"R_X86_64_IRELATIVE"
+        return "R_X86_64_IRELATIVE"
     else:
         return "UNKNOWN"
 
@@ -993,17 +1084,17 @@ def get_elf_vis_string(value):
 
 
 class Colors:
-    purple = '\033[95m'
-    blue = '\033[94m'
-    green = '\033[92m'
-    yellow = '\033[93m'
-    red = '\033[91m'
-    grey = '\033[1;37m'
-    darkgrey = '\033[1;30m'
-    cyan = '\033[1;36m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+    purple = "\033[95m"
+    blue = "\033[94m"
+    green = "\033[92m"
+    yellow = "\033[93m"
+    red = "\033[91m"
+    grey = "\033[1;37m"
+    darkgrey = "\033[1;30m"
+    cyan = "\033[1;36m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 def openSO_r(path):
@@ -1016,11 +1107,30 @@ def openSO_w(path):
     return so
 
 
-class ELFHDR():
-    def __init__(self, ei_mag, ei_class, ei_data, ei_version, ei_osabi,
-                 ei_abiversion, ei_pad, e_type, e_machine, e_version, e_entry,
-                 e_phoff, e_shoff, e_flags, e_ehsize, e_phentsize, e_phnum,
-                 e_shentsize, e_shnum, e_shstrndx):
+class ELFHDR:
+    def __init__(
+        self,
+        ei_mag,
+        ei_class,
+        ei_data,
+        ei_version,
+        ei_osabi,
+        ei_abiversion,
+        ei_pad,
+        e_type,
+        e_machine,
+        e_version,
+        e_entry,
+        e_phoff,
+        e_shoff,
+        e_flags,
+        e_ehsize,
+        e_phentsize,
+        e_phnum,
+        e_shentsize,
+        e_shnum,
+        e_shstrndx,
+    ):
         self.ei_mag = ei_mag
         self.ei_class = ei_class
         self.ei_data = ei_data
@@ -1043,9 +1153,19 @@ class ELFHDR():
         self.e_shstrndx = e_shstrndx
 
 
-class PHDR():
-    def __init__(self, p_type, p_flags, p_offset, p_vaddr, p_paddr, p_filesz,
-                 p_memsz, p_flags2, p_align):
+class PHDR:
+    def __init__(
+        self,
+        p_type,
+        p_flags,
+        p_offset,
+        p_vaddr,
+        p_paddr,
+        p_filesz,
+        p_memsz,
+        p_flags2,
+        p_align,
+    ):
         self.p_type = p_type
         self.p_flags = p_flags
         self.p_offset = p_offset
@@ -1057,9 +1177,20 @@ class PHDR():
         self.p_align = p_align
 
 
-class SHDR():
-    def __init__(self, sh_name, sh_type, sh_flags, sh_addr, sh_offset, sh_size,
-                 sh_link, sh_info, sh_addralign, sh_entsize):
+class SHDR:
+    def __init__(
+        self,
+        sh_name,
+        sh_type,
+        sh_flags,
+        sh_addr,
+        sh_offset,
+        sh_size,
+        sh_link,
+        sh_info,
+        sh_addralign,
+        sh_entsize,
+    ):
         self.sh_name = sh_name
         self.sh_type = sh_type
         self.sh_flags = sh_flags
@@ -1072,9 +1203,18 @@ class SHDR():
         self.sh_entsize = sh_entsize
 
 
-class Symbol_Table_Entry64():
-    def __init__(self, st_name, st_info, st_other, st_shndx, st_value,
-                 st_size, st_bind, st_type):
+class Symbol_Table_Entry64:
+    def __init__(
+        self,
+        st_name,
+        st_info,
+        st_other,
+        st_shndx,
+        st_value,
+        st_size,
+        st_bind,
+        st_type,
+    ):
         self.st_name = st_name
         self.st_info = st_info
         self.st_other = st_other
@@ -1089,8 +1229,9 @@ class ELF(object):
     def __init__(self, so):
         self.so = so
         self.so.seek(0, 0)
-        self.elfhdr = ELFHDR(0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        self.elfhdr = ELFHDR(
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        )
         self.phdr = []
         self.shhdr = []
         self.size = int()
@@ -1137,7 +1278,8 @@ class ELF(object):
                 num = int(byte2int(self.shhdr[i].sh_size) / 24)
                 for j in range(0, num):
                     self.read_st_entry(
-                        symbol_tb[offset:offset + 24], self.string_tb_e)
+                        symbol_tb[offset : offset + 24], self.string_tb_e
+                    )
                     offset += 24
             if type == sh_type_e.SHT_DYNSYM:
                 self.so.seek(byte2int(self.shhdr[i].sh_offset), 0)
@@ -1146,7 +1288,8 @@ class ELF(object):
                 num = int(byte2int(self.shhdr[i].sh_size) / 24)
                 for j in range(0, num):
                     self.read_st_entry(
-                        symbol_tb[offset:offset + 24], self.string_tb_e_dyn)
+                        symbol_tb[offset : offset + 24], self.string_tb_e_dyn
+                    )
                     offset += 24
         self.pop_data_section()
         self.pop_text_section()
@@ -1263,7 +1406,7 @@ class ELF(object):
         dummy.st_value = st[8:16]
         dummy.st_size = st[16:24]
         dummy.st_bind = byte2int(dummy.st_info) >> 4
-        dummy.st_type = byte2int(dummy.st_info) & 0x0f
+        dummy.st_type = byte2int(dummy.st_info) & 0x0F
         entry_list.append(dummy)
 
     def read_section_name(self, index):
@@ -1276,7 +1419,7 @@ class ELF(object):
             index += 1
             name.append(chr(char))
             char = strings[index]
-        return ''.join(name)
+        return "".join(name)
 
     def get_ph_dyn_entries(self):
         size = 0
@@ -1285,15 +1428,16 @@ class ELF(object):
                 self.so.seek(byte2int(phdr.p_offset), 0)
                 size = byte2int(phdr.p_filesz)
                 ph_dyn = self.so.read(size)
-        for i in range(int(size/8)):
-            d_tag = byte2int(ph_dyn[8*i:8*i + 4])
-            d_un = byte2int(ph_dyn[8*i + 4:8*i + 8])
+        for i in range(int(size / 8)):
+            d_tag = byte2int(ph_dyn[8 * i : 8 * i + 4])
+            d_un = byte2int(ph_dyn[8 * i + 4 : 8 * i + 8])
             self.ph_dyn_ent.append(ph_dynamic_entry(d_tag, d_un))
 
     def dump_ph_dyn_entries(self):
         header = ["d_tag", "d_un"]
-        tag_list = [get_ph_dynamic_ent_tag_type(
-            ph.d_tag) for ph in self.ph_dyn_ent]
+        tag_list = [
+            get_ph_dynamic_ent_tag_type(ph.d_tag) for ph in self.ph_dyn_ent
+        ]
         un_list = [ph.d_un for ph in self.ph_dyn_ent]
         lines = ffs(2, header, True, tag_list, un_list)
         for line in lines:
@@ -1306,8 +1450,9 @@ class ELF(object):
         for iter in self.string_tb_e:
             if iter.st_type == ELF_ST_TYPE.STT_FUNC:
                 self.so.seek(int.from_bytes(iter.st_value, byteorder="little"))
-                obj = self.so.read(int.from_bytes(
-                    iter.st_size, byteorder="little"))
+                obj = self.so.read(
+                    int.from_bytes(iter.st_size, byteorder="little")
+                )
                 ret_list.append(obj)
                 for byte in obj:
                     dummy.append(int(byte))
@@ -1325,8 +1470,13 @@ class ELF(object):
         ret_list = []
         for entry in self.string_tb_e:
             if entry.st_type == stt_type:
-                ret_list.append("".join(self.get_st_entry_symbol_string(
-                    byte2int(entry.st_name), ".strtab")))
+                ret_list.append(
+                    "".join(
+                        self.get_st_entry_symbol_string(
+                            byte2int(entry.st_name), ".strtab"
+                        )
+                    )
+                )
         if dump_b:
             for name in ret_list:
                 print(name)
@@ -1349,23 +1499,23 @@ class ELF(object):
                         if count % 16 == 0:
                             for ch in strrep:
                                 if ord(ch) > 32 and ord(ch) < 127:
-                                    print(ch, end='')
+                                    print(ch, end="")
                                 else:
                                     print(" ", end="")
                             print()
                             strrep = []
-                            print(format(count, "06x"), ': ', end='')
+                            print(format(count, "06x"), ": ", end="")
                             strrep.append(str(chr(byte)))
-                            print(format(byte, '02x') + ' ', end='')
+                            print(format(byte, "02x") + " ", end="")
                         else:
                             strrep += str(chr(byte))
-                            print(format(byte, '02x') + ' ', end='')
+                            print(format(byte, "02x") + " ", end="")
                         count += 1
-                    for i in range(0, 16-count % 16):
+                    for i in range(0, 16 - count % 16):
                         print("   ", end="")
                     for ch in strrep:
                         if ord(ch) > 32 and ord(ch) < 127:
-                            print(ch, end='')
+                            print(ch, end="")
                         else:
                             print(" ", end="")
                     print()
@@ -1376,8 +1526,12 @@ class ELF(object):
                 # print(ret_dummy)
                 return ret_dummy
         if not hit:
-            print(Colors.red + Colors.BOLD +
-                  "section is not present" + Colors.ENDC)
+            print(
+                Colors.red
+                + Colors.BOLD
+                + "section is not present"
+                + Colors.ENDC
+            )
 
     def dump_obj_size(self, stt_type, dump_b):
         ret_list = []
@@ -1397,8 +1551,17 @@ class ELF(object):
         info_list = [byte2int(st.st_info) for st in self.string_tb_e]
         other_list = [byte2int(st.st_other) for st in self.string_tb_e]
         shndx_list = [byte2int(st.st_shndx) for st in self.string_tb_e]
-        lines = ffs(2, header, True, name_list, size_list,
-                    value_list, info_list, other_list, shndx_list)
+        lines = ffs(
+            2,
+            header,
+            True,
+            name_list,
+            size_list,
+            value_list,
+            info_list,
+            other_list,
+            shndx_list,
+        )
         print(Colors.green + Colors.BOLD + "symbol:" + Colors.ENDC)
         for line in lines:
             print(line)
@@ -1410,17 +1573,44 @@ class ELF(object):
         info_list = [byte2int(st.st_info) for st in self.string_tb_e_dyn]
         other_list = [byte2int(st.st_other) for st in self.string_tb_e_dyn]
         shndx_list = [byte2int(st.st_shndx) for st in self.string_tb_e_dyn]
-        lines = ffs(2, header, True, name_list, size_list,
-                    value_list, info_list, other_list, shndx_list)
+        lines = ffs(
+            2,
+            header,
+            True,
+            name_list,
+            size_list,
+            value_list,
+            info_list,
+            other_list,
+            shndx_list,
+        )
         for line in lines:
             print(line)
 
     def dump_header(self):
-        header = ["ei_mag", "ei_class", "ei_data", "ei_version", "ei_osabi",
-                  "ei_abiversion", "ei_pad", "e_type", "e_machine",
-                  "e_version", "e_version", "e_entry", "e_phoff", "e_shoff",
-                  "e_flags", "e_entsize", "e_phentsize", "e_phnum",
-                  "e_shentsize", "e_shnum", "e_shstrndx"]
+        header = [
+            "ei_mag",
+            "ei_class",
+            "ei_data",
+            "ei_version",
+            "ei_osabi",
+            "ei_abiversion",
+            "ei_pad",
+            "e_type",
+            "e_machine",
+            "e_version",
+            "e_version",
+            "e_entry",
+            "e_phoff",
+            "e_shoff",
+            "e_flags",
+            "e_entsize",
+            "e_phentsize",
+            "e_phnum",
+            "e_shentsize",
+            "e_shnum",
+            "e_shstrndx",
+        ]
         mag_list = [self.elfhdr.ei_mag]
         class_list = [byte2int(self.elfhdr.ei_class)]
         data_list = [byte2int(self.elfhdr.ei_data)]
@@ -1441,22 +1631,52 @@ class ELF(object):
         shentsize_list = [byte2int(self.elfhdr.e_shentsize)]
         shnum_list = [byte2int(self.elfhdr.e_shnum)]
         shstrndx_list = [byte2int(self.elfhdr.e_shstrndx)]
-        lines = ffs(2, header, True, mag_list, class_list, data_list,
-                    version_list, osabi_list, abiversion_list,
-                    pad_list, type_list, machine_list, version_list,
-                    entry_list, phoff_list, shoff_list,
-                    flags_list, ehsize_list, phentsize_list, phnum_list,
-                    shentsize_list, phnum_list, shentsize_list,
-                    shnum_list, shstrndx_list)
+        lines = ffs(
+            2,
+            header,
+            True,
+            mag_list,
+            class_list,
+            data_list,
+            version_list,
+            osabi_list,
+            abiversion_list,
+            pad_list,
+            type_list,
+            machine_list,
+            version_list,
+            entry_list,
+            phoff_list,
+            shoff_list,
+            flags_list,
+            ehsize_list,
+            phentsize_list,
+            phnum_list,
+            shentsize_list,
+            phnum_list,
+            shentsize_list,
+            shnum_list,
+            shstrndx_list,
+        )
         for line in lines:
             print(line)
 
     def dump_phdrs(self):
-        header = ["p_type", "p_flags", "p_offset", "p_vaddr",
-                  "p_paddr", "p_filesz", "p_memsz", "p_flags2", "p_align"]
+        header = [
+            "p_type",
+            "p_flags",
+            "p_offset",
+            "p_vaddr",
+            "p_paddr",
+            "p_filesz",
+            "p_memsz",
+            "p_flags2",
+            "p_align",
+        ]
         type_list = [get_ph_type(byte2int(phdr.p_type)) for phdr in self.phdr]
-        flags_list = [get_elf_seg_flag(byte2int(phdr.p_type))
-                      for phdr in self.phdr]
+        flags_list = [
+            get_elf_seg_flag(byte2int(phdr.p_type)) for phdr in self.phdr
+        ]
         offset_list = [byte2int(phdr.p_offset) for phdr in self.phdr]
         vaddr_list = [byte2int(phdr.p_vaddr) for phdr in self.phdr]
         paddr_list = [byte2int(phdr.p_paddr) for phdr in self.phdr]
@@ -1465,20 +1685,44 @@ class ELF(object):
         flags2_list = [phdr.p_flags2 for phdr in self.phdr]
         align_list = [byte2hex(phdr.p_align) for phdr in self.phdr]
 
-        lines = ffs(2, header, True, type_list, flags_list, offset_list,
-                    vaddr_list, paddr_list, filesz_list, memsz_list,
-                    flags2_list, align_list)
+        lines = ffs(
+            2,
+            header,
+            True,
+            type_list,
+            flags_list,
+            offset_list,
+            vaddr_list,
+            paddr_list,
+            filesz_list,
+            memsz_list,
+            flags2_list,
+            align_list,
+        )
         for line in lines:
             print(line)
 
     def dump_shdrs(self):
-        header = ["sh_name", "sh_type", "sh_flags", "sh_addr", "sh_offset",
-                  "sh_size", "sh_link", "sh_info", "sh_addralign",
-                  "sh_entsize"]
-        name_list = [self.read_section_name(
-            byte2int(shhdr.sh_name)) for shhdr in self.shhdr]
-        type_list = [get_section_type_string(
-            byte2int(shhdr.sh_type)) for shhdr in self.shhdr]
+        header = [
+            "sh_name",
+            "sh_type",
+            "sh_flags",
+            "sh_addr",
+            "sh_offset",
+            "sh_size",
+            "sh_link",
+            "sh_info",
+            "sh_addralign",
+            "sh_entsize",
+        ]
+        name_list = [
+            self.read_section_name(byte2int(shhdr.sh_name))
+            for shhdr in self.shhdr
+        ]
+        type_list = [
+            get_section_type_string(byte2int(shhdr.sh_type))
+            for shhdr in self.shhdr
+        ]
         flag_list = [byte2int(shhdr.sh_flags) for shhdr in self.shhdr]
         addr_list = [byte2int(shhdr.sh_addr) for shhdr in self.shhdr]
         offset_list = [byte2int(shhdr.sh_offset) for shhdr in self.shhdr]
@@ -1488,71 +1732,148 @@ class ELF(object):
         allign_list = [byte2int(shhdr.sh_addralign) for shhdr in self.shhdr]
         entsize_list = [byte2int(shhdr.sh_entsize) for shhdr in self.shhdr]
 
-        lines = ffs(2, header, True, name_list, type_list, flag_list,
-                    addr_list, offset_list, size_list, link_list,
-                    info_list, allign_list, entsize_list)
+        lines = ffs(
+            2,
+            header,
+            True,
+            name_list,
+            type_list,
+            flag_list,
+            addr_list,
+            offset_list,
+            size_list,
+            link_list,
+            info_list,
+            allign_list,
+            entsize_list,
+        )
         for line in lines:
             print(line)
 
     def dump_symbol_tb(self, name, type):
         for i in range(0, byte2int(self.elfhdr.e_shnum)):
             if byte2int(self.shhdr[i].sh_type) == type:
-                if (name == self.read_section_name(
-                        byte2int(self.shhdr[i].sh_name))):
-                    print(Colors.BOLD + Colors.yellow +
-                          "STRING TABLE:" + Colors.ENDC)
+                if name == self.read_section_name(
+                    byte2int(self.shhdr[i].sh_name)
+                ):
+                    print(
+                        Colors.BOLD
+                        + Colors.yellow
+                        + "STRING TABLE:"
+                        + Colors.ENDC
+                    )
                     self.so.seek(byte2int(self.shhdr[i].sh_offset), 0)
                     symbol_tb = self.so.read(byte2int(self.shhdr[i].sh_size))
                     for byte in symbol_tb:
-                        print(chr(byte), end='')
-                        if chr(byte) == '\0':
+                        print(chr(byte), end="")
+                        if chr(byte) == "\0":
                             print()
 
     def dump_st_entries(self):
-        header = ["name_index", "name", "value", "size",
-                  "info", "other", "shndx", "bind", "type"]
+        header = [
+            "name_index",
+            "name",
+            "value",
+            "size",
+            "info",
+            "other",
+            "shndx",
+            "bind",
+            "type",
+        ]
         idx_list = [byte2int(entry.st_name) for entry in self.string_tb_e]
-        name_list = ["".join(self.get_st_entry_symbol_string(
-            byte2int(entry.st_name), ".strtab")) for entry in self.string_tb_e]
+        name_list = [
+            "".join(
+                self.get_st_entry_symbol_string(
+                    byte2int(entry.st_name), ".strtab"
+                )
+            )
+            for entry in self.string_tb_e
+        ]
         value_list = [byte2int(entry.st_value) for entry in self.string_tb_e]
         size_list = [byte2int(entry.st_size) for entry in self.string_tb_e]
         info_list = [byte2int(entry.st_info) for entry in self.string_tb_e]
         other_list = [byte2int(entry.st_other) for entry in self.string_tb_e]
         shndx_list = [byte2int(entry.st_shndx) for entry in self.string_tb_e]
-        bind_list = [get_elf_st_bind_string(
-            entry.st_bind) for entry in self.string_tb_e]
-        type_list = [get_elf_st_type_string(
-            entry.st_type) for entry in self.string_tb_e]
+        bind_list = [
+            get_elf_st_bind_string(entry.st_bind) for entry in self.string_tb_e
+        ]
+        type_list = [
+            get_elf_st_type_string(entry.st_type) for entry in self.string_tb_e
+        ]
 
-        lines = ffs(2, header, True, idx_list, name_list, value_list,
-                    size_list, info_list, other_list, shndx_list, bind_list,
-                    type_list)
+        lines = ffs(
+            2,
+            header,
+            True,
+            idx_list,
+            name_list,
+            value_list,
+            size_list,
+            info_list,
+            other_list,
+            shndx_list,
+            bind_list,
+            type_list,
+        )
         for line in lines:
             print(line)
 
     def dump_st_entries_dyn(self):
-        header = ["name_index", "name", "value", "size",
-                  "info", "other", "shndx", "bind", "type"]
+        header = [
+            "name_index",
+            "name",
+            "value",
+            "size",
+            "info",
+            "other",
+            "shndx",
+            "bind",
+            "type",
+        ]
         idx_list = [byte2int(entry.st_name) for entry in self.string_tb_e_dyn]
-        name_list = ["".join(self.get_st_entry_symbol_string(
-            byte2int(entry.st_name), ".dynstr"))
-                     for entry in self.string_tb_e_dyn]
-        value_list = [byte2int(entry.st_value)
-                      for entry in self.string_tb_e_dyn]
+        name_list = [
+            "".join(
+                self.get_st_entry_symbol_string(
+                    byte2int(entry.st_name), ".dynstr"
+                )
+            )
+            for entry in self.string_tb_e_dyn
+        ]
+        value_list = [
+            byte2int(entry.st_value) for entry in self.string_tb_e_dyn
+        ]
         size_list = [byte2int(entry.st_size) for entry in self.string_tb_e_dyn]
         info_list = [byte2int(entry.st_info) for entry in self.string_tb_e_dyn]
-        other_list = [byte2int(entry.st_other)
-                      for entry in self.string_tb_e_dyn]
-        shndx_list = [byte2int(entry.st_shndx)
-                      for entry in self.string_tb_e_dyn]
-        bind_list = [get_elf_st_bind_string(
-            entry.st_bind) for entry in self.string_tb_e_dyn]
-        type_list = [get_elf_st_type_string(
-            entry.st_type) for entry in self.string_tb_e_dyn]
+        other_list = [
+            byte2int(entry.st_other) for entry in self.string_tb_e_dyn
+        ]
+        shndx_list = [
+            byte2int(entry.st_shndx) for entry in self.string_tb_e_dyn
+        ]
+        bind_list = [
+            get_elf_st_bind_string(entry.st_bind)
+            for entry in self.string_tb_e_dyn
+        ]
+        type_list = [
+            get_elf_st_type_string(entry.st_type)
+            for entry in self.string_tb_e_dyn
+        ]
 
-        lines = ffs(2, header, True, idx_list, name_list, value_list,
-                    size_list, info_list, other_list, shndx_list, bind_list,
-                    type_list)
+        lines = ffs(
+            2,
+            header,
+            True,
+            idx_list,
+            name_list,
+            value_list,
+            size_list,
+            info_list,
+            other_list,
+            shndx_list,
+            bind_list,
+            type_list,
+        )
         for line in lines:
             print(line)
 
@@ -1562,8 +1883,15 @@ class ELF(object):
         tag_list = [entry["tag"] for entry in who]
         value_list = [entry["value"] for entry in who]
         value_list_hex = [hex(entry["value"]) for entry in who]
-        lines = ffs(2, header, True, tag_string_list,
-                    tag_list, value_list, value_list_hex)
+        lines = ffs(
+            2,
+            header,
+            True,
+            tag_string_list,
+            tag_list,
+            value_list,
+            value_list_hex,
+        )
         for line in lines:
             print(line)
 
@@ -1588,8 +1916,10 @@ class ELF(object):
         symbol = []
         for i in range(0, byte2int(self.elfhdr.e_shnum)):
             name = self.read_section_name(byte2int(self.shhdr[i].sh_name))
-            if (byte2int(self.shhdr[i].sh_type) == sh_type_e.SHT_STRTAB and
-                    name == section_name):
+            if (
+                byte2int(self.shhdr[i].sh_type) == sh_type_e.SHT_STRTAB
+                and name == section_name
+            ):
                 self.so.seek(byte2int(self.shhdr[i].sh_offset) + index, 0)
                 byte = self.so.read(1)
                 while chr(byte[0]) != "\0":
@@ -1600,14 +1930,28 @@ class ELF(object):
 
     def get_symbol_string_table(self, offset):
         symbol = []
-        for i in range(0, int.from_bytes(self.elfhdr.e_shnum,
-                                         byteorder="little", signed=False)):
-            if (int.from_bytes(self.shhdr[i].sh_type,
-                               byteorder="little",
-                               signed=False) == sh_type_e.SHT_STRTAB):
-                self.so.seek(int.from_bytes(
-                    self.shhdr[i].sh_offset, byteorder="little",
-                    signed=False) + offset - 0, 0)
+        for i in range(
+            0,
+            int.from_bytes(
+                self.elfhdr.e_shnum, byteorder="little", signed=False
+            ),
+        ):
+            if (
+                int.from_bytes(
+                    self.shhdr[i].sh_type, byteorder="little", signed=False
+                )
+                == sh_type_e.SHT_STRTAB
+            ):
+                self.so.seek(
+                    int.from_bytes(
+                        self.shhdr[i].sh_offset,
+                        byteorder="little",
+                        signed=False,
+                    )
+                    + offset
+                    - 0,
+                    0,
+                )
                 byte = self.so.read(1)
                 while chr(byte[0]) != "\0":
                     if chr(byte[0]) != "\0":
@@ -1618,11 +1962,16 @@ class ELF(object):
     def dump_inst_sections(self):
         indices = []
         for section in self.shhdr:
-            if (int.from_bytes(section.sh_flags,
-                               byteorder="little", signed=False) &
-                    sh_flags_e.SHF_EXECINSTR == sh_flags_e.SHF_EXECINSTR):
-                indices.append(int.from_bytes(
-                    section.sh_name, byteorder="little"))
+            if (
+                int.from_bytes(
+                    section.sh_flags, byteorder="little", signed=False
+                )
+                & sh_flags_e.SHF_EXECINSTR
+                == sh_flags_e.SHF_EXECINSTR
+            ):
+                indices.append(
+                    int.from_bytes(section.sh_name, byteorder="little")
+                )
         return indices
 
     def pop_data_section(self):
@@ -1653,13 +2002,16 @@ class ELF(object):
             jmp_val = 4
         else:
             jmp_val = 8
-            print("self.size is not set for class "
-                  "elf.going with 8 as a default.")
-        for offset in range(0, length, jmp_val*2):
-            tag_type = byte2int(self.dyn_section[offset:offset+jmp_val])
+            print(
+                "self.size is not set for class "
+                "elf.going with 8 as a default."
+            )
+        for offset in range(0, length, jmp_val * 2):
+            tag_type = byte2int(self.dyn_section[offset : offset + jmp_val])
             dummy["tag"] = tag_type
             value = byte2int(
-                self.dyn_section[offset+jmp_val:offset+(jmp_val*2)])
+                self.dyn_section[offset + jmp_val : offset + (jmp_val * 2)]
+            )
             dummy["value"] = value
             type_string = get_ph_dynamic_ent_tag_type(tag_type)
             dummy["type_string"] = type_string
@@ -1684,14 +2036,21 @@ class ELF(object):
                 size = byte2int(section.sh_size)
                 entsize = byte2int(section.sh_entsize)
         if entsize != 0:
-            for i in range(0, int(size/entsize)):
+            for i in range(0, int(size / entsize)):
                 dummy["r_offset"] = byte2int(
-                    section_whole[i*entsize:i*entsize+step])
+                    section_whole[i * entsize : i * entsize + step]
+                )
                 dummy["r_info"] = byte2int(
-                    section_whole[i*entsize+step:i*entsize+(step*2)])
+                    section_whole[
+                        i * entsize + step : i * entsize + (step * 2)
+                    ]
+                )
                 dummy["r_addend"] = byte2int(
-                    section_whole[i*entsize+(step*2):i*entsize+(step*3)],
-                    sign=True)
+                    section_whole[
+                        i * entsize + (step * 2) : i * entsize + (step * 3)
+                    ],
+                    sign=True,
+                )
                 to_pop.append(dummy)
                 dummy = {}
 
@@ -1711,11 +2070,13 @@ class ELF(object):
                 section_whole = self.so.read(byte2int(section.sh_size))
                 size = byte2int(section.sh_size)
                 entsize = byte2int(section.sh_entsize)
-        for i in range(0, int(size/entsize)):
+        for i in range(0, int(size / entsize)):
             dummy["r_offset"] = byte2int(
-                section_whole[i*entsize:i*entsize+step])
+                section_whole[i * entsize : i * entsize + step]
+            )
             dummy["r_info"] = byte2int(
-                section_whole[i*entsize+step:i*entsize+(step*2)])
+                section_whole[i * entsize + step : i * entsize + (step * 2)]
+            )
             to_pop.append(dummy)
             dummy = {}
 
@@ -1727,7 +2088,7 @@ class ELF(object):
                 self.so.seek(byte2int(shhdr.sh_offset))
                 self.got = self.so.read(byte2int(shhdr.sh_size))
                 self.so.seek(byte2int(shhdr.sh_offset))
-                for i in range(0, int(byte2int(shhdr.sh_size)/8)):
+                for i in range(0, int(byte2int(shhdr.sh_size) / 8)):
                     self.got_ents.append(byte2int(self.so.read(8)))
 
     # FIXME-ELF64 only
@@ -1738,7 +2099,7 @@ class ELF(object):
                 self.so.seek(byte2int(shhdr.sh_offset))
                 self.got_plt = self.so.read(byte2int(shhdr.sh_size))
                 self.so.seek(byte2int(shhdr.sh_offset))
-                for i in range(0, int(byte2int(shhdr.sh_size)/8)):
+                for i in range(0, int(byte2int(shhdr.sh_size) / 8)):
                     self.got_plt_ents.append(byte2int(self.so.read(8)))
 
     def dump_got(self):
@@ -1756,7 +2117,7 @@ class ELF(object):
             print(line)
 
 
-class obj_loader():
+class obj_loader:
     def __init__(self, bytes):
         self.memory = bytes()
 
@@ -1814,6 +2175,7 @@ def elf_get_rodata_section():
     elf.init(64)
     return elf.dump_section(".rodata", False)
 
+
 # obj here means variables or what the C standard means by objects
 
 
@@ -1822,6 +2184,7 @@ def elf_get_obj_names():
     elf = ELF(so)
     elf.init(64)
     return elf.dump_symbol_string(ELF_ST_TYPE.STT_OBJECT, False)
+
 
 # obj here means variables or what the C standard means by objects
 
@@ -1889,13 +2252,15 @@ class Rewriter(object):
         self.shdr_new_size = []
         self.shdr_new_offset = []
 
-    def fix_section_offsets(self, section_name, new_size: int,
-                            new_section: bytes):
+    def fix_section_offsets(
+        self, section_name, new_size: int, new_section: bytes
+    ):
         # file_w = open(self.new_name, "wb")
         # magic_number = int()
         for i in range(0, byte2int(self.elf.elfhdr.e_shnum)):
             name = self.elf.read_section_name(
-                byte2int(self.elf.shhdr[i].sh_name))
+                byte2int(self.elf.shhdr[i].sh_name)
+            )
             if section_name == name:
                 self.magic_section_number = i
         print(self.magic_section_number)
@@ -1908,23 +2273,27 @@ class Rewriter(object):
         for i in range(0, byte2int(self.elf.elfhdr.e_shnum)):
             if i > self.magic_section_number:
                 extra_chunk = end % byte2int(self.elf.shhdr[i].sh_addralign)
-                missing_chunk = byte2int(
-                    self.elf.shhdr[i].sh_addralign) - extra_chunk
+                missing_chunk = (
+                    byte2int(self.elf.shhdr[i].sh_addralign) - extra_chunk
+                )
                 assert missing_chunk > 0, "missing chunk is negative"
                 self.shdr_new_size.append(byte2int(self.elf.shhdr[i].sh_size))
                 self.shdr_new_offset.append(
-                    end + missing_chunk %
-                    byte2int(self.elf.shhdr[i].sh_addralign))
+                    end
+                    + missing_chunk % byte2int(self.elf.shhdr[i].sh_addralign)
+                )
                 end = self.shdr_new_offset[-1] + self.shdr_new_size[-1]
 
             elif i < self.magic_section_number:
                 self.shdr_new_size.append(byte2int(self.elf.shhdr[i].sh_size))
                 self.shdr_new_offset.append(
-                    byte2int(self.elf.shhdr[i].sh_offset))
+                    byte2int(self.elf.shhdr[i].sh_offset)
+                )
             elif i == self.magic_section_number:
                 self.shdr_new_size.append(new_size)
                 self.shdr_new_offset.append(
-                    byte2int(self.elf.shhdr[i].sh_offset))
+                    byte2int(self.elf.shhdr[i].sh_offset)
+                )
                 end = byte2int(self.elf.shhdr[i].sh_offset) + new_size
         for size in self.shdr_new_size:
             print(repr(i) + " new size is " + repr(size))
@@ -1964,7 +2333,7 @@ def premain(argparser):
     elif argparser.args.test2:
         rewriter = Rewriter(argparser.args.obj, "new_exe")
         new_text = bytes()
-        rewriter.fix_section_offsets(".text", 1000,  new_text)
+        rewriter.fix_section_offsets(".text", 1000, new_text)
     elif argparser.args.dumpfunc:
         counter = 0
         for name in elf.dump_symbol_string(ELF_ST_TYPE.STT_FUNC, False):
@@ -1994,19 +2363,23 @@ def premain(argparser):
                 if byte2int(section.sh_flags) & 0x4 != 0x04:
                     print(
                         "section is not executable...but, "
-                        "since you asked, here you go...")
+                        "since you asked, here you go..."
+                    )
                 elf.so.seek(byte2int(section.sh_offset))
                 code = elf.so.read(byte2int(section.sh_size))
                 md = Cs(CS_ARCH_X86, CS_MODE_64)
                 for i in md.disasm(bytes(code), 0x0):
-                    print(hex(i.address).ljust(7),
-                          i.mnemonic.ljust(7), i.op_str)
+                    print(
+                        hex(i.address).ljust(7), i.mnemonic.ljust(7), i.op_str
+                    )
     elif argparser.args.disassp is not None:
         index = argparser.args.disassp
         # section not executable message
         if byte2int(elf.phdr[index].p_flags) & 0x1 != 1:
-            print("program header section is not "
-                  "executable but since you asked...")
+            print(
+                "program header section is not "
+                "executable but since you asked..."
+            )
         header_offset = elf.phdr[index].p_offset
         header_size = elf.phdr[index].p_filesz
         elf.so.seek(byte2int(header_offset))
@@ -2030,6 +2403,25 @@ def premain(argparser):
     elif argparser.args.gotplt:
         elf.pop_got_plt()
         elf.dump_got_plt()
+    elif argparser.args.listdso:
+        os.environ["LD_TRACE_LOADED_OBJECTS"] = "1"
+        os.environ["LD_WARN"] = "yes"
+        os.environ["LD_BIND_NOW"] = "yes"
+        # os.environ["LD_VERBOSE"] = "yes"
+        # os.environ["LD_DEBUG"] = "all"
+        rtldlist = [
+            "/usr/lib/ld-linux.so.2",
+            "/usr/lib64/ld-linux-x86-64.so.2",
+            "/usr/libx32/ld-linux-x32.so.2",
+        ]
+        for rtld in rtldlist:
+            if os.path.exists(rtld):
+                result = subprocess.run(
+                    [rtld, argparser.args.obj],
+                    capture_output=True,
+                )
+                print(result.stdout.decode("utf-8"))
+                break
     else:
         print("why even bother if you were not gonna type anythng decent in?")
 
