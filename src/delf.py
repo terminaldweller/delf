@@ -21,7 +21,6 @@
 import argparse
 import code
 import os
-import signal
 import subprocess
 import sys
 
@@ -54,19 +53,10 @@ def SigHandler_SIGINT(signum, frame):
     sys.exit(0)
 
 
-class ExceptionHandler(object):
-    def __init__(self, globals, locals):
-        self.variables = globals().copy()
-        self.variables.update(locals())
-        self.shell = code.InteractiveConsole()
-
-
 class CLIArgParser(object):
     def __init__(self):
         parser = argparse.ArgumentParser()
-        parser.add_argument(
-            "--dbg", action="store_true", help="debug", default=False
-        )
+        parser.add_argument("--dbg", action="store_true", help="debug", default=False)
         parser.add_argument(
             "--obj",
             type=str,
@@ -207,8 +197,7 @@ class CLIArgParser(object):
         self.args = parser.parse_args()
         if self.args.obj is None:
             raise Exception(
-                "no object file provided. "
-                "please specify an object with --obj."
+                "no object file provided. " "please specify an object with --obj."
             )
 
 
@@ -248,7 +237,7 @@ def LEB128SignedDecode(bytelist):
 def LEB128UnsignedEncode(int_val):
     if int_val < 0:
         raise Exception("value must not be negative")
-    elif int_val == 0:
+    if int_val == 0:
         return bytes([0])
     byte_array = bytearray()
     while int_val:
@@ -265,9 +254,7 @@ def LEB128SignedEncode(int_val):
         byte = int_val & 0x7F
         byte_array.append(byte | 0x80)
         int_val >>= 7
-        if (int_val == 0 and byte & 0x40 == 0) or (
-            int_val == -1 and byte & 0x40
-        ):
+        if (int_val == 0 and byte & 0x40 == 0) or (int_val == -1 and byte & 0x40):
             byte_array[-1] ^= 0x80
             break
     return byte_array
@@ -301,9 +288,7 @@ def ffs(offset, header_list, numbered, *args):
     if numbered:
         numbers_f.extend(range(1, len(args[-1]) + 1))
         max_column_width.append(
-            max([len(repr(number)) for number in numbers_f])
-            if numbers_f
-            else 6
+            max([len(repr(number)) for number in numbers_f]) if numbers_f else 6
         )
         header_list.insert(0, "idx")
 
@@ -1229,9 +1214,7 @@ class ELF(object):
     def __init__(self, so):
         self.so = so
         self.so.seek(0, 0)
-        self.elfhdr = ELFHDR(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        )
+        self.elfhdr = ELFHDR(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
         self.phdr = []
         self.shhdr = []
         self.size = int()
@@ -1435,9 +1418,7 @@ class ELF(object):
 
     def dump_ph_dyn_entries(self):
         header = ["d_tag", "d_un"]
-        tag_list = [
-            get_ph_dynamic_ent_tag_type(ph.d_tag) for ph in self.ph_dyn_ent
-        ]
+        tag_list = [get_ph_dynamic_ent_tag_type(ph.d_tag) for ph in self.ph_dyn_ent]
         un_list = [ph.d_un for ph in self.ph_dyn_ent]
         lines = ffs(2, header, True, tag_list, un_list)
         for line in lines:
@@ -1450,9 +1431,7 @@ class ELF(object):
         for iter in self.string_tb_e:
             if iter.st_type == ELF_ST_TYPE.STT_FUNC:
                 self.so.seek(int.from_bytes(iter.st_value, byteorder="little"))
-                obj = self.so.read(
-                    int.from_bytes(iter.st_size, byteorder="little")
-                )
+                obj = self.so.read(int.from_bytes(iter.st_size, byteorder="little"))
                 ret_list.append(obj)
                 for byte in obj:
                     dummy.append(int(byte))
@@ -1526,12 +1505,7 @@ class ELF(object):
                 # print(ret_dummy)
                 return ret_dummy
         if not hit:
-            print(
-                Colors.red
-                + Colors.BOLD
-                + "section is not present"
-                + Colors.ENDC
-            )
+            print(Colors.red + Colors.BOLD + "section is not present" + Colors.ENDC)
 
     def dump_obj_size(self, stt_type, dump_b):
         ret_list = []
@@ -1674,9 +1648,7 @@ class ELF(object):
             "p_align",
         ]
         type_list = [get_ph_type(byte2int(phdr.p_type)) for phdr in self.phdr]
-        flags_list = [
-            get_elf_seg_flag(byte2int(phdr.p_type)) for phdr in self.phdr
-        ]
+        flags_list = [get_elf_seg_flag(byte2int(phdr.p_type)) for phdr in self.phdr]
         offset_list = [byte2int(phdr.p_offset) for phdr in self.phdr]
         vaddr_list = [byte2int(phdr.p_vaddr) for phdr in self.phdr]
         paddr_list = [byte2int(phdr.p_paddr) for phdr in self.phdr]
@@ -1716,12 +1688,10 @@ class ELF(object):
             "sh_entsize",
         ]
         name_list = [
-            self.read_section_name(byte2int(shhdr.sh_name))
-            for shhdr in self.shhdr
+            self.read_section_name(byte2int(shhdr.sh_name)) for shhdr in self.shhdr
         ]
         type_list = [
-            get_section_type_string(byte2int(shhdr.sh_type))
-            for shhdr in self.shhdr
+            get_section_type_string(byte2int(shhdr.sh_type)) for shhdr in self.shhdr
         ]
         flag_list = [byte2int(shhdr.sh_flags) for shhdr in self.shhdr]
         addr_list = [byte2int(shhdr.sh_addr) for shhdr in self.shhdr]
@@ -1753,15 +1723,8 @@ class ELF(object):
     def dump_symbol_tb(self, name, type):
         for i in range(0, byte2int(self.elfhdr.e_shnum)):
             if byte2int(self.shhdr[i].sh_type) == type:
-                if name == self.read_section_name(
-                    byte2int(self.shhdr[i].sh_name)
-                ):
-                    print(
-                        Colors.BOLD
-                        + Colors.yellow
-                        + "STRING TABLE:"
-                        + Colors.ENDC
-                    )
+                if name == self.read_section_name(byte2int(self.shhdr[i].sh_name)):
+                    print(Colors.BOLD + Colors.yellow + "STRING TABLE:" + Colors.ENDC)
                     self.so.seek(byte2int(self.shhdr[i].sh_offset), 0)
                     symbol_tb = self.so.read(byte2int(self.shhdr[i].sh_size))
                     for byte in symbol_tb:
@@ -1783,11 +1746,7 @@ class ELF(object):
         ]
         idx_list = [byte2int(entry.st_name) for entry in self.string_tb_e]
         name_list = [
-            "".join(
-                self.get_st_entry_symbol_string(
-                    byte2int(entry.st_name), ".strtab"
-                )
-            )
+            "".join(self.get_st_entry_symbol_string(byte2int(entry.st_name), ".strtab"))
             for entry in self.string_tb_e
         ]
         value_list = [byte2int(entry.st_value) for entry in self.string_tb_e]
@@ -1833,31 +1792,19 @@ class ELF(object):
         ]
         idx_list = [byte2int(entry.st_name) for entry in self.string_tb_e_dyn]
         name_list = [
-            "".join(
-                self.get_st_entry_symbol_string(
-                    byte2int(entry.st_name), ".dynstr"
-                )
-            )
+            "".join(self.get_st_entry_symbol_string(byte2int(entry.st_name), ".dynstr"))
             for entry in self.string_tb_e_dyn
         ]
-        value_list = [
-            byte2int(entry.st_value) for entry in self.string_tb_e_dyn
-        ]
+        value_list = [byte2int(entry.st_value) for entry in self.string_tb_e_dyn]
         size_list = [byte2int(entry.st_size) for entry in self.string_tb_e_dyn]
         info_list = [byte2int(entry.st_info) for entry in self.string_tb_e_dyn]
-        other_list = [
-            byte2int(entry.st_other) for entry in self.string_tb_e_dyn
-        ]
-        shndx_list = [
-            byte2int(entry.st_shndx) for entry in self.string_tb_e_dyn
-        ]
+        other_list = [byte2int(entry.st_other) for entry in self.string_tb_e_dyn]
+        shndx_list = [byte2int(entry.st_shndx) for entry in self.string_tb_e_dyn]
         bind_list = [
-            get_elf_st_bind_string(entry.st_bind)
-            for entry in self.string_tb_e_dyn
+            get_elf_st_bind_string(entry.st_bind) for entry in self.string_tb_e_dyn
         ]
         type_list = [
-            get_elf_st_type_string(entry.st_type)
-            for entry in self.string_tb_e_dyn
+            get_elf_st_type_string(entry.st_type) for entry in self.string_tb_e_dyn
         ]
 
         lines = ffs(
@@ -1932,14 +1879,10 @@ class ELF(object):
         symbol = []
         for i in range(
             0,
-            int.from_bytes(
-                self.elfhdr.e_shnum, byteorder="little", signed=False
-            ),
+            int.from_bytes(self.elfhdr.e_shnum, byteorder="little", signed=False),
         ):
             if (
-                int.from_bytes(
-                    self.shhdr[i].sh_type, byteorder="little", signed=False
-                )
+                int.from_bytes(self.shhdr[i].sh_type, byteorder="little", signed=False)
                 == sh_type_e.SHT_STRTAB
             ):
                 self.so.seek(
@@ -1963,15 +1906,11 @@ class ELF(object):
         indices = []
         for section in self.shhdr:
             if (
-                int.from_bytes(
-                    section.sh_flags, byteorder="little", signed=False
-                )
+                int.from_bytes(section.sh_flags, byteorder="little", signed=False)
                 & sh_flags_e.SHF_EXECINSTR
                 == sh_flags_e.SHF_EXECINSTR
             ):
-                indices.append(
-                    int.from_bytes(section.sh_name, byteorder="little")
-                )
+                indices.append(int.from_bytes(section.sh_name, byteorder="little"))
         return indices
 
     def pop_data_section(self):
@@ -2002,10 +1941,7 @@ class ELF(object):
             jmp_val = 4
         else:
             jmp_val = 8
-            print(
-                "self.size is not set for class "
-                "elf.going with 8 as a default."
-            )
+            print("self.size is not set for class " "elf.going with 8 as a default.")
         for offset in range(0, length, jmp_val * 2):
             tag_type = byte2int(self.dyn_section[offset : offset + jmp_val])
             dummy["tag"] = tag_type
@@ -2041,14 +1977,10 @@ class ELF(object):
                     section_whole[i * entsize : i * entsize + step]
                 )
                 dummy["r_info"] = byte2int(
-                    section_whole[
-                        i * entsize + step : i * entsize + (step * 2)
-                    ]
+                    section_whole[i * entsize + step : i * entsize + (step * 2)]
                 )
                 dummy["r_addend"] = byte2int(
-                    section_whole[
-                        i * entsize + (step * 2) : i * entsize + (step * 3)
-                    ],
+                    section_whole[i * entsize + (step * 2) : i * entsize + (step * 3)],
                     sign=True,
                 )
                 to_pop.append(dummy)
@@ -2252,15 +2184,11 @@ class Rewriter(object):
         self.shdr_new_size = []
         self.shdr_new_offset = []
 
-    def fix_section_offsets(
-        self, section_name, new_size: int, new_section: bytes
-    ):
+    def fix_section_offsets(self, section_name, new_size: int, new_section: bytes):
         # file_w = open(self.new_name, "wb")
         # magic_number = int()
         for i in range(0, byte2int(self.elf.elfhdr.e_shnum)):
-            name = self.elf.read_section_name(
-                byte2int(self.elf.shhdr[i].sh_name)
-            )
+            name = self.elf.read_section_name(byte2int(self.elf.shhdr[i].sh_name))
             if section_name == name:
                 self.magic_section_number = i
         print(self.magic_section_number)
@@ -2273,27 +2201,20 @@ class Rewriter(object):
         for i in range(0, byte2int(self.elf.elfhdr.e_shnum)):
             if i > self.magic_section_number:
                 extra_chunk = end % byte2int(self.elf.shhdr[i].sh_addralign)
-                missing_chunk = (
-                    byte2int(self.elf.shhdr[i].sh_addralign) - extra_chunk
-                )
+                missing_chunk = byte2int(self.elf.shhdr[i].sh_addralign) - extra_chunk
                 assert missing_chunk > 0, "missing chunk is negative"
                 self.shdr_new_size.append(byte2int(self.elf.shhdr[i].sh_size))
                 self.shdr_new_offset.append(
-                    end
-                    + missing_chunk % byte2int(self.elf.shhdr[i].sh_addralign)
+                    end + missing_chunk % byte2int(self.elf.shhdr[i].sh_addralign)
                 )
                 end = self.shdr_new_offset[-1] + self.shdr_new_size[-1]
 
             elif i < self.magic_section_number:
                 self.shdr_new_size.append(byte2int(self.elf.shhdr[i].sh_size))
-                self.shdr_new_offset.append(
-                    byte2int(self.elf.shhdr[i].sh_offset)
-                )
+                self.shdr_new_offset.append(byte2int(self.elf.shhdr[i].sh_offset))
             elif i == self.magic_section_number:
                 self.shdr_new_size.append(new_size)
-                self.shdr_new_offset.append(
-                    byte2int(self.elf.shhdr[i].sh_offset)
-                )
+                self.shdr_new_offset.append(byte2int(self.elf.shhdr[i].sh_offset))
                 end = byte2int(self.elf.shhdr[i].sh_offset) + new_size
         for size in self.shdr_new_size:
             print(repr(i) + " new size is " + repr(size))
@@ -2301,7 +2222,8 @@ class Rewriter(object):
             print(repr(i) + " new offset is " + repr(offset))
 
 
-def premain(argparser):
+def main() -> None:
+    argparser = CLIArgParser()
     so = openSO_r(argparser.args.obj)
     elf = ELF(so)
     elf.init(64)
@@ -2369,17 +2291,12 @@ def premain(argparser):
                 code = elf.so.read(byte2int(section.sh_size))
                 md = Cs(CS_ARCH_X86, CS_MODE_64)
                 for i in md.disasm(bytes(code), 0x0):
-                    print(
-                        hex(i.address).ljust(7), i.mnemonic.ljust(7), i.op_str
-                    )
+                    print(hex(i.address).ljust(7), i.mnemonic.ljust(7), i.op_str)
     elif argparser.args.disassp is not None:
         index = argparser.args.disassp
         # section not executable message
         if byte2int(elf.phdr[index].p_flags) & 0x1 != 1:
-            print(
-                "program header section is not "
-                "executable but since you asked..."
-            )
+            print("program header section is not " "executable but since you asked...")
         header_offset = elf.phdr[index].p_offset
         header_size = elf.phdr[index].p_filesz
         elf.so.seek(byte2int(header_offset))
@@ -2424,24 +2341,6 @@ def premain(argparser):
                 break
     else:
         print("why even bother if you were not gonna type anythng decent in?")
-
-
-def main():
-    argparser = CLIArgParser()
-    if argparser.args.dbg:
-        try:
-            premain(argparser)
-        except Exception as e:
-            print(e.__doc__)
-            if e.message:
-                print(e.message)
-            signal.signal(signal.SIGINT, SigHandler_SIGINT)
-            variables = globals().copy()
-            variables.update(locals())
-            shell = code.InteractiveConsole(variables)
-            shell.interact(banner="DELF REPL")
-    else:
-        premain(argparser)
 
 
 if __name__ == "__main__":

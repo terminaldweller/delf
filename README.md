@@ -5,6 +5,12 @@
 # delf
 delf is an ELF dump tool.<br/>
 
+## Installation
+You will also need to have `libcapstone` installed.
+```sh
+pip install delf
+```
+
 ## Requirements
 You need python3 and `capstone`. If you don't have capstone you can get it by:<br/>
 ```bash
