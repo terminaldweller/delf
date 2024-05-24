@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "delf"
-version = "0.1.4"
+version = "0.1.5"
 description = "yet another elf dump tool"
 authors = ["terminaldweller <devi@terminaldweller.com>"]
 license = "GPL-3.0"
@@ -14,7 +14,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.12"
 capstone = "^4.0.2"
 setuptools = "^69.5.1"
 
