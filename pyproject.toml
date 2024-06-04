@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "delf"
-version = "0.1.5"
+version = "0.2.0"
 description = "yet another elf dump tool"
 authors = ["terminaldweller <devi@terminaldweller.com>"]
 license = "GPL-3.0"
@@ -29,6 +29,7 @@ pylint = "^3.0.2"
 bandit = "^1.7.5"
 ruff = "^0.1.1"
 black = ">=23.10,<25.0"
+openai = "^1.30.4"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

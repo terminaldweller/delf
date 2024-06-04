@@ -19,10 +19,10 @@
 # MA  02110-1301, USA.*/
 # *****************************************************************************/
 import argparse
-import code
 import os
 import subprocess
 import sys
+import typing
 
 from capstone import CS_ARCH_X86, CS_MODE_64, Cs
 
@@ -30,6 +30,8 @@ from capstone import CS_ARCH_X86, CS_MODE_64, Cs
 
 
 class ELF_TYPE_SIZES:
+    """Const class that holds ELF type sizes in bytes"""
+
     ELF32_HALF = 2
     ELF64_HALF = 2
     ELF32_WORD = 4
@@ -53,7 +55,7 @@ def SigHandler_SIGINT(signum, frame):
     sys.exit(0)
 
 
-class CLIArgParser(object):
+class CLIArgParser:
     def __init__(self):
         parser = argparse.ArgumentParser()
         parser.add_argument("--dbg", action="store_true", help="debug", default=False)
@@ -194,6 +196,12 @@ class CLIArgParser(object):
             help="dump .got.plt section",
             default=False,
         )
+        parser.add_argument(
+            "--nocolor",
+            action="store_true",
+            help="dont use color",
+            default=False,
+        )
         self.args = parser.parse_args()
         if self.args.obj is None:
             raise Exception(
@@ -273,16 +281,29 @@ class ELF_RELA:
         self.r_addend = r_addend
 
 
-def ffs(offset, header_list, numbered, *args):
+def ffs(
+    offset,
+    header_list,
+    numbered,
+    nocolor,
+    *args,
+):
     # cn = Colors.green
-    ch = Colors.cyan
-    cd = Colors.blue
-    cb = Colors.BOLD
-    ci = Colors.red
-    ce = Colors.ENDC
+    if nocolor:
+        ch = ""
+        cd = ""
+        cb = ""
+        ci = ""
+        ce = ""
+    else:
+        ch = Colors.cyan
+        cd = Colors.blue
+        cb = Colors.BOLD
+        ci = Colors.red
+        ce = Colors.ENDC
     max_column_width = []
-    lines = []
-    numbers_f = []
+    lines: typing.List[str] = []
+    numbers_f: typing.List[int] = []
     dummy = []
 
     if numbered:
@@ -1210,8 +1231,10 @@ class Symbol_Table_Entry64:
         self.st_type = st_type
 
 
-class ELF(object):
-    def __init__(self, so):
+class ELF:
+    """The ELF class that holds everything about the ELF file."""
+
+    def __init__(self, so, argparser):
         self.so = so
         self.so.seek(0, 0)
         self.elfhdr = ELFHDR(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -1240,6 +1263,7 @@ class ELF(object):
         self.plt_got_ents = []
         self.got_ents = []
         self.got_plt_ents = []
+        self.argparser = argparser
 
     def init(self, size):
         self.size = size
@@ -1420,7 +1444,7 @@ class ELF(object):
         header = ["d_tag", "d_un"]
         tag_list = [get_ph_dynamic_ent_tag_type(ph.d_tag) for ph in self.ph_dyn_ent]
         un_list = [ph.d_un for ph in self.ph_dyn_ent]
-        lines = ffs(2, header, True, tag_list, un_list)
+        lines = ffs(2, header, True, self.argparser.args.nocolor, tag_list, un_list)
         for line in lines:
             print(line)
 
@@ -1473,7 +1497,7 @@ class ELF(object):
                     self.dlpath = repr(obj)
                 count = int()
                 if dump:
-                    strrep = []
+                    strrep: typing.List[str] = []
                     for byte in obj:
                         if count % 16 == 0:
                             for ch in strrep:
@@ -1529,6 +1553,7 @@ class ELF(object):
             2,
             header,
             True,
+            self.argparser.args.nocoor,
             name_list,
             size_list,
             value_list,
@@ -1551,6 +1576,7 @@ class ELF(object):
             2,
             header,
             True,
+            self.argparser.args.noclor,
             name_list,
             size_list,
             value_list,
@@ -1609,6 +1635,7 @@ class ELF(object):
             2,
             header,
             True,
+            self.argparser.args.nocolor,
             mag_list,
             class_list,
             data_list,
@@ -1661,6 +1688,7 @@ class ELF(object):
             2,
             header,
             True,
+            self.argparser.args.nocolor,
             type_list,
             flags_list,
             offset_list,
@@ -1706,6 +1734,7 @@ class ELF(object):
             2,
             header,
             True,
+            self.argparser.args.nocolor,
             name_list,
             type_list,
             flag_list,
@@ -1765,6 +1794,7 @@ class ELF(object):
             2,
             header,
             True,
+            self.argparser.args.nocolor,
             idx_list,
             name_list,
             value_list,
@@ -1811,6 +1841,7 @@ class ELF(object):
             2,
             header,
             True,
+            self.argparser.args.nocolor,
             idx_list,
             name_list,
             value_list,
@@ -1834,6 +1865,7 @@ class ELF(object):
             2,
             header,
             True,
+            self.argparser.args.nocolor,
             tag_string_list,
             tag_list,
             value_list,
@@ -1847,7 +1879,15 @@ class ELF(object):
         r_offset_list = [entry["r_offset"] for entry in to_dump]
         r_info_list = [entry["r_info"] for entry in to_dump]
         addend_list = [entry["r_addend"] for entry in to_dump]
-        lines = ffs(2, header, True, r_offset_list, r_info_list, addend_list)
+        lines = ffs(
+            2,
+            header,
+            True,
+            self.argparser.args.nocolor,
+            r_offset_list,
+            r_info_list,
+            addend_list,
+        )
         for line in lines:
             print(line)
 
@@ -1855,7 +1895,9 @@ class ELF(object):
         header = ["r_offset", "r_info"]
         r_offset_list = [entry["r_offset"] for entry in to_dump]
         r_info_list = [entry["r_info"] for entry in to_dump]
-        lines = ffs(2, header, True, r_offset_list, r_info_list)
+        lines = ffs(
+            2, header, True, self.argparser.args.nocolor, r_offset_list, r_info_list
+        )
         for line in lines:
             print(line)
 
@@ -2037,14 +2079,14 @@ class ELF(object):
     def dump_got(self):
         header = ["value"]
         value_list = [entry for entry in self.got_ents]
-        lines = ffs(2, header, True, value_list)
+        lines = ffs(2, header, True, self.argparser.args.nocolor, value_list)
         for line in lines:
             print(line)
 
     def dump_got_plt(self):
         header = ["value"]
         value_list = [entry for entry in self.got_plt_ents]
-        lines = ffs(2, header, True, value_list)
+        lines = ffs(2, header, True, self.argparser.args.nocolor, value_list)
         for line in lines:
             print(line)
 
@@ -2074,109 +2116,11 @@ def ch_exe_to_so(path):
     so.close
 
 
-def elf_init():
-    so = openSO_r(sys.argv[1])
-    elf = ELF(so)
-    elf.init(64)
-
-
-def elf_get_func_names():
-    so = openSO_r(sys.argv[1])
-    elf = ELF(so)
-    elf.init(64)
-    return elf.dump_symbol_string(ELF_ST_TYPE.STT_FUNC, False)
-
-
-def elf_get_text_section():
-    so = openSO_r(sys.argv[1])
-    elf = ELF(so)
-    elf.init(64)
-    return elf.dump_section(".text", False)
-
-
-def elf_get_section(name):
-    so = openSO_r(sys.argv[1])
-    elf = ELF(so)
-    elf.init(64)
-    return elf.dump_section(name, False)
-
-
-def elf_get_rodata_section():
-    so = openSO_r(sys.argv[1])
-    elf = ELF(so)
-    elf.init(64)
-    return elf.dump_section(".rodata", False)
-
-
-# obj here means variables or what the C standard means by objects
-
-
-def elf_get_obj_names():
-    so = openSO_r(sys.argv[1])
-    elf = ELF(so)
-    elf.init(64)
-    return elf.dump_symbol_string(ELF_ST_TYPE.STT_OBJECT, False)
-
-
-# obj here means variables or what the C standard means by objects
-
-
-def elf_get_obj_sizes():
-    so = openSO_r(sys.argv[1])
-    elf = ELF(so)
-    elf.init(64)
-    return elf.dump_obj_size(ELF_ST_TYPE.STT_OBJECT, False)
-
-
-def elf_get_func_code():
-    so = openSO_r(sys.argv[1])
-    elf = ELF(so)
-    elf.init(64)
-    return elf.dump_funcs(False)
-
-
-def elf_get_func_code_byname():
-    so = openSO_r(sys.argv[1])
-    arg = openSO_r(sys.argv[2])
-    elf = ELF(so)
-    elf.init(64)
-    counter = 0
-    # hit = False
-    for name in elf.dump_symbol_string(ELF_ST_TYPE.STT_FUNC, False):
-        if name == arg:
-            code = elf.dump_funcs(False)[counter]
-            # hit = True
-        counter += 1
-    return code
-
-
-class Call_Rewriter(object):
-    # def __init__(self, obj_code, arch, mode):
-    def __init__(self, obj_code):
-        self.obj_code = bytes(obj_code)
-        self.md = Cs(CS_ARCH_X86, CS_MODE_64)
-        # self.md = Cs(arch, mode)
-
-    def dumpall(self):
-        for i in self.md.disasm(self.obj_code, 0x1):
-            print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
-
-    def run(self):
-        for i in self.md.disasm(self.obj_code, 0x1):
-            if i.mnemonic == "call":
-                print("0x%x:\t%s\t%s" % (i.address, i.mnemonic, i.op_str))
-                print(i.bytes)
-
-
-class Global_Rewriter(object):
-    def __init__(self):
-        pass
-
-
-class Rewriter(object):
-    def __init__(self, path, new_name):
+class Rewriter:
+    def __init__(self, path, new_name, argparser):
         so = openSO_r(path)
-        self.elf = ELF(so)
+        self.argparser = argparser
+        self.elf = ELF(so, argparser)
         self.elf.init(64)
         # shutil.copyfile(path, "/tmp/exe")
         self.magic_section_number = int()
@@ -2223,9 +2167,10 @@ class Rewriter(object):
 
 
 def main() -> None:
+    """The entryp point."""
     argparser = CLIArgParser()
     so = openSO_r(argparser.args.obj)
-    elf = ELF(so)
+    elf = ELF(so, argparser)
     elf.init(64)
     if argparser.args.header:
         elf.dump_header()
@@ -2253,7 +2198,7 @@ def main() -> None:
     elif argparser.args.section:
         elf.dump_section(argparser.args.section, True)
     elif argparser.args.test2:
-        rewriter = Rewriter(argparser.args.obj, "new_exe")
+        rewriter = Rewriter(argparser.args.obj, "new_exe", argparser)
         new_text = bytes()
         rewriter.fix_section_offsets(".text", 1000, new_text)
     elif argparser.args.dumpfunc:
@@ -2296,7 +2241,7 @@ def main() -> None:
         index = argparser.args.disassp
         # section not executable message
         if byte2int(elf.phdr[index].p_flags) & 0x1 != 1:
-            print("program header section is not " "executable but since you asked...")
+            print("program header section is not executable but since you asked...")
         header_offset = elf.phdr[index].p_offset
         header_size = elf.phdr[index].p_filesz
         elf.so.seek(byte2int(header_offset))

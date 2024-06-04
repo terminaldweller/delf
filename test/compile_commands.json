@@ -1,7 +1,0 @@
-[
-    {
-        "command": "cc -c -fpic -O0 -g -v --debug -o test.o test.c", 
-        "directory": "/home/bloodstalker/extra/delf/test", 
-        "file": "/home/bloodstalker/extra/delf/test/test.c"
-    }
-]

@@ -22,21 +22,18 @@ You can then run it with `poetry shell` or `poetry run`.<br/>
 
 ## Options
 
-For a list of available options just run `delf -h`:<br/>
+For a list of available options just run `delf --help`:<br/>
 
 ```txt
-usage: delf [-h] [--dbg] [--obj OBJ] [--header] [--symboltable] [--phdrs]
-            [--shdrs] [--symbolindex] [--stentries] [--objcode] [--test]
-            [--test2] [--funcs] [--objs] [--dynsym] [--dlpath] [--phdynent]
-            [--section SECTION] [--dumpfunc DUMPFUNC]
-            [--dumpfuncasm DUMPFUNCASM] [--textasm] [--dynsecents] [--reladyn]
-            [--relaplt] [--rodata] [--disass DISASS]
+$ delf --help
+usage: delf [-h] [--dbg] [--obj OBJ] [--header] [--symboltable] [--phdrs] [--shdrs] [--symbolindex] [--stentries] [--objcode] [--test] [--test2] [--listdso] [--funcs] [--objs] [--dynsym] [--dlpath] [--phdynent]
+            [--section SECTION] [--dumpfunc DUMPFUNC] [--dumpfuncasm DUMPFUNCASM] [--textasm] [--dynsecents] [--reladyn] [--relaplt] [--rodata] [--disass DISASS] [--disassp DISASSP] [--got] [--gotplt]
+            [--noclor]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --dbg                 debug
-  --obj OBJ             path to the executbale, shared object or object you
-                        want to load in bruiser
+  --obj OBJ             path to the executbale, shared object or object you want to load in bruiser
   --header              dump headers
   --symboltable         dump symbol table
   --phdrs               dump program haeders
@@ -46,6 +43,7 @@ optional arguments:
   --objcode             dump objects
   --test                test switch
   --test2               test switch 2
+  --listdso             list DSOs
   --funcs               dump functions
   --objs                dump objects
   --dynsym              dump dynamic symbol table
@@ -60,8 +58,11 @@ optional arguments:
   --reladyn             .rela.dyn entries
   --relaplt             .rela.plt entries
   --rodata              dump .rodata
-  --disass DISASS       disassemblt a section
-
+  --disass DISASS       disassembls a section by name in section headers
+  --disassp DISASSP     disassembls a section by index in program headers
+  --got                 dump .got section
+  --gotplt              dump .got.plt section
+  --noclor              dont use color
 ```
 
 ## Example usage
