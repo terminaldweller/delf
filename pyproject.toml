@@ -16,7 +16,7 @@ include = [
 [tool.poetry.dependencies]
 python = "^3.12"
 capstone = "^4.0.2"
-setuptools = "^69.5.1"
+setuptools = ">=69.5.1,<71.0.0"
 
 [tool.poetry.scripts]
 delf = "delf:main"
