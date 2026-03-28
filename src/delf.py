@@ -2269,8 +2269,6 @@ def main() -> None:
         os.environ["LD_TRACE_LOADED_OBJECTS"] = "1"
         os.environ["LD_WARN"] = "yes"
         os.environ["LD_BIND_NOW"] = "yes"
-        # os.environ["LD_VERBOSE"] = "yes"
-        # os.environ["LD_DEBUG"] = "all"
         rtldlist = [
             "/usr/lib/ld-linux.so.2",
             "/usr/lib64/ld-linux-x86-64.so.2",
@@ -2285,7 +2283,7 @@ def main() -> None:
                 print(result.stdout.decode("utf-8"))
                 break
     else:
-        print("why even bother if you were not gonna type anythng decent in?")
+        print("unknown option provided!")
 
 
 if __name__ == "__main__":

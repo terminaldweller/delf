@@ -21,8 +21,6 @@ setuptools = "^70.0.0"
 [tool.poetry.scripts]
 delf = "delf:main"
 
-[tool.poetry.dev-dependencies]
-
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.6.1"
 pylint = "^3.0.2"
